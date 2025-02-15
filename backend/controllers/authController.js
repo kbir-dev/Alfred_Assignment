@@ -9,17 +9,29 @@ const generateToken = (user) => {
 };
 
 // Register User
-exports.register = async (req, res) => {
+exports.signup = async (req, res) => {
   try {
     const { username, email, password } = req.body;
-    const existingUser = await User.findOne({ email });
-
-    if (existingUser) return res.status(400).json({ message: "User already exists" });
-
     const user = await User.create({ username, email, password });
-    res.status(201).json({ message: "User registered successfully", token: generateToken(user) });
+    
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '30d',
+    });
+
+    res.status(201).json({
+      status: 'success',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(400).json({
+      status: 'fail',
+      message: error.message,
+    });
   }
 };
 
@@ -27,15 +39,33 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    
     const user = await User.findOne({ email });
-
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(400).json({ message: "Invalid credentials" });
+    if (!user || !(await user.comparePassword(password))) {
+      return res.status(401).json({
+        status: 'fail',
+        message: 'Invalid email or password',
+      });
     }
 
-    res.json({ message: "Login successful", token: generateToken(user) });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '30d',
+    });
+
+    res.status(200).json({
+      status: 'success',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    res.status(400).json({
+      status: 'fail',
+      message: error.message,
+    });
   }
 };
 

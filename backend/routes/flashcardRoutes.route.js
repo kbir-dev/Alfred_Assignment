@@ -2,13 +2,18 @@
 const express = require('express');
 const router = express.Router();
 const flashcardController = require('../controllers/flashCardController');
+const { protect } = require('../middlewares/auth.middleware');
 
-router.post('/', flashcardController.createFlashcard);
+// Apply protection middleware to all routes
+router.use(protect);
 
-router.get('/', flashcardController.getFlashcards);
+// Routes
+router.route('/')
+  .get(flashcardController.getFlashcards)
+  .post(flashcardController.createFlashcard);
 
-router.put('/:id', flashcardController.updateFlashcard);
-
-router.delete('/:id', flashcardController.deleteFlashcard);
+router.route('/:id')
+  .put(flashcardController.updateFlashcard)
+  .delete(flashcardController.deleteFlashcard);
 
 module.exports = router;

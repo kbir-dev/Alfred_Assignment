@@ -5,16 +5,16 @@ import { Trash2 } from 'lucide-react';
 const FlashcardList = ({ flashcards, onDelete }) => {
   return (
     <div className="mb-8">
-      <h2 className="text-2xl font-bold mb-4 text-black dark:text-white font-mono">Your Flashcards</h2>
+      <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white font-mono">Your Flashcards</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {flashcards.map((flashcard) => (
           <div
             key={flashcard._id}
-            className="p-4 bg-green-300 dark:bg-gray-800 rounded-lg shadow-lg border-2 border-black dark:border-gray-600 transform hover:scale-105 transition-transform"
+            className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 border-gray-200 dark:border-gray-600 transform hover:scale-105 transition-transform"
           >
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <div className="font-semibold mb-2 text-black dark:text-white">
+                <div className="font-semibold mb-2 text-gray-900 dark:text-white">
                   Question: {flashcard.question}
                 </div>
                 <div className="text-gray-700 dark:text-gray-300">

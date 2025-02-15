@@ -18,8 +18,16 @@ const FlashcardSchema = new mongoose.Schema(
       type: Date,
       default: Date.now, 
     },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    }
   },
   { timestamps: true }
 );
+
+// Add compound index for user-specific queries
+FlashcardSchema.index({ user: 1, nextReviewDate: 1 });
 
 module.exports = mongoose.model('Flashcard', FlashcardSchema);

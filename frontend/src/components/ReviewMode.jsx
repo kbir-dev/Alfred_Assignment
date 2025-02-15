@@ -1,10 +1,16 @@
 // src/components/ReviewMode.jsx
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Check, X, RotateCcw } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const ReviewMode = ({ flashcards, onUpdateCard }) => {
+  const { updateUserStreak } = useAuth();
   const [currentCard, setCurrentCard] = useState(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [dueCards, setDueCards] = useState([]);
+  const [direction, setDirection] = useState(0);
+  const [exitX, setExitX] = useState(0);
 
   useEffect(() => {
     const now = new Date();
@@ -16,63 +22,163 @@ const ReviewMode = ({ flashcards, onUpdateCard }) => {
   }, [flashcards]);
 
   const handleResponse = async (correct) => {
-    await onUpdateCard(currentCard._id, correct);
-    setShowAnswer(false);
-    const remainingCards = dueCards.filter(card => card._id !== currentCard._id);
-    setDueCards(remainingCards);
-    setCurrentCard(remainingCards[0] || null);
+    setExitX(correct ? 100 : -100);
+    try {
+      const response = await onUpdateCard(currentCard._id, correct);
+      if (response?.streak) {
+        updateUserStreak(response.streak);
+      }
+      setShowAnswer(false);
+      const remainingCards = dueCards.filter(card => card._id !== currentCard._id);
+      setDueCards(remainingCards);
+      setCurrentCard(remainingCards[0] || null);
+    } catch (err) {
+      console.error('Error updating card:', err);
+    }
   };
 
   if (!currentCard) {
     return (
-      <div className="text-center p-8 bg-purple-300 dark:bg-gray-800 rounded-lg shadow-lg border-4 border-black dark:border-gray-600">
-        <h2 className="text-2xl font-bold text-black dark:text-white mb-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg border-2 border-gray-200 dark:border-gray-600"
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="inline-block mb-4"
+        >
+          <RotateCcw className="w-16 h-16 text-blue-500" />
+        </motion.div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
           No cards due for review! 🎉
         </h2>
-      </div>
+        <p className="text-gray-600 dark:text-gray-400">
+          Come back later when you have cards to review
+        </p>
+      </motion.div>
     );
   }
 
+  const cardVariants = {
+    initial: (direction) => ({
+      x: direction > 0 ? 1000 : -1000,
+      opacity: 0,
+      scale: 0.5,
+    }),
+    animate: {
+      x: 0,
+      opacity: 1,
+      scale: 1,
+    },
+    exit: {
+      x: exitX,
+      opacity: 0,
+      scale: 0.5,
+    },
+  };
+
   return (
     <div className="flex flex-col items-center">
-      <div className="w-full max-w-2xl p-8 bg-blue-300 dark:bg-gray-800 rounded-lg shadow-lg border-4 border-black dark:border-gray-600 mb-4">
-        <div className="text-xl font-bold mb-4 text-black dark:text-white">
-          {currentCard.question}
-        </div>
-        
-        {showAnswer ? (
-          <>
-            <div className="text-lg mb-4 text-gray-800 dark:text-gray-200">
-              {currentCard.answer}
-            </div>
-            <div className="flex space-x-4">
-              <button
-                onClick={() => handleResponse(false)}
-                className="flex-1 py-3 bg-red-500 text-white rounded-lg border-2 border-black hover:bg-red-600 transform hover:scale-105 transition-all"
-              >
-                Got it Wrong
-              </button>
-              <button
-                onClick={() => handleResponse(true)}
-                className="flex-1 py-3 bg-green-500 text-white rounded-lg border-2 border-black hover:bg-green-600 transform hover:scale-105 transition-all"
-              >
-                Got it Right
-              </button>
-            </div>
-          </>
-        ) : (
-          <button
-            onClick={() => setShowAnswer(true)}
-            className="w-full py-3 bg-yellow-500 text-white rounded-lg border-2 border-black hover:bg-yellow-600 transform hover:scale-105 transition-all"
+      <div className="relative w-full max-w-2xl">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentCard._id}
+            className="w-full"
+            variants={cardVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            custom={direction}
+            transition={{
+              x: { type: "spring", stiffness: 300, damping: 30 },
+              opacity: { duration: 0.2 },
+              scale: { duration: 0.2 },
+            }}
           >
-            Show Answer
-          </button>
-        )}
+            <div className="w-full p-8 bg-white dark:bg-gray-800 rounded-lg shadow-xl border-2 border-gray-200 dark:border-gray-600 mb-4">
+              <div className="min-h-[120px] relative mb-6">
+                <AnimatePresence mode="wait">
+                  {!showAnswer ? (
+                    <motion.div
+                      key="question"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute w-full"
+                    >
+                      <div className="text-xl font-bold text-gray-900 dark:text-white">
+                        {currentCard.question}
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="answer"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="absolute w-full"
+                    >
+                      <div className="text-xl font-bold text-gray-900 dark:text-white">
+                        {currentCard.answer}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <div className="mt-6">
+                {showAnswer ? (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex space-x-4"
+                  >
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleResponse(false)}
+                      className="flex-1 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center space-x-2"
+                    >
+                      <X className="w-5 h-5" />
+                      <span>Got it Wrong</span>
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleResponse(true)}
+                      className="flex-1 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2"
+                    >
+                      <Check className="w-5 h-5" />
+                      <span>Got it Right</span>
+                    </motion.button>
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowAnswer(true)}
+                    className="w-full py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    Show Answer
+                  </motion.button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
       
-      <div className="text-lg text-gray-600 dark:text-gray-300">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-lg text-gray-600 dark:text-gray-300"
+      >
         Cards remaining: {dueCards.length}
-      </div>
+      </motion.div>
     </div>
   );
 };
