@@ -17,24 +17,34 @@ const NODE_ENV = process.env.NODE_ENV || 'development'
 
 // Security middleware for production
 if (NODE_ENV === 'production') {
-  app.use(helmet())
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
+  }));
   app.use(compression())
 }
 
-// CORS configuration
+// CORS configuration with more options
 app.use(cors({
-  origin: [
-    'https://alfredlearningplatform.vercel.app',
-    'http://localhost:5173'
-  ],
-  credentials: true
+  origin: ['https://alfredlearningplatform.vercel.app', 'http://localhost:5173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 86400 // 24 hours
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 app.use(express.json());
 
-// Add this before your routes
+// Request logging middleware
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
+  // Log headers in development
+  if (NODE_ENV === 'development') {
+    console.log('Headers:', req.headers);
+  }
   next();
 });
 
@@ -46,13 +56,13 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
-// Add this after your routes
+// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
+  console.error('Error:', err);
+  res.status(err.status || 500).json({
     status: 'error',
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    message: err.message || 'Something went wrong!',
+    error: NODE_ENV === 'development' ? err : undefined
   });
 });
 
@@ -62,6 +72,7 @@ const startServer = async () => {
     await connectDB();
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
+      console.log(`Environment: ${NODE_ENV}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
