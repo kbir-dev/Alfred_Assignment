@@ -6,6 +6,6 @@
     }
   ],
   "env": {
-    "VITE_API_URL": "https://your-backend-url.onrender.com/api"
+    "VITE_API_URL": "https://alfred-flashcard-learning.onrender.com/api"
   }
 } 
