@@ -3,38 +3,52 @@ const User = require('../models/user.model');
 
 exports.protect = async (req, res, next) => {
   try {
-    // 1. Check if token exists
+    // 1. Get token and check if it exists
     let token;
-    if (req.headers.authorization?.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith('Bearer')) {
+      token = authHeader.split(' ')[1];
     }
 
     if (!token) {
+      console.log('No token found');
       return res.status(401).json({
         status: 'error',
         message: 'Not authorized to access this route'
       });
     }
 
-    // 2. Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    try {
+      // 2. Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      // 3. Check if user still exists
+      const currentUser = await User.findById(decoded.id);
+      
+      if (!currentUser) {
+        console.log('User not found for token');
+        return res.status(401).json({
+          status: 'error',
+          message: 'User not found'
+        });
+      }
 
-    // 3. Check if user still exists
-    const currentUser = await User.findById(decoded.id);
-    if (!currentUser) {
+      // 4. Attach user to request
+      req.user = currentUser;
+      next();
+    } catch (error) {
+      console.log('Token verification failed:', error.message);
       return res.status(401).json({
         status: 'error',
-        message: 'User not found'
+        message: 'Invalid token'
       });
     }
-
-    // 4. Attach user to request
-    req.user = currentUser;
-    next();
   } catch (error) {
-    return res.status(401).json({
+    console.log('Auth middleware error:', error);
+    return res.status(500).json({
       status: 'error',
-      message: 'Not authorized to access this route'
+      message: 'Authentication error'
     });
   }
 };

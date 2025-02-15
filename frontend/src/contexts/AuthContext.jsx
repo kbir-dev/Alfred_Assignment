@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      // Verify token and set user
+      api.setAuthToken(token); // Set token in axios defaults
       verifyToken(token);
     } else {
       setLoading(false);
@@ -25,7 +25,9 @@ export const AuthProvider = ({ children }) => {
         streak: response.user.streak || { count: 0, lastReviewDate: null }
       });
     } catch (error) {
+      console.error('Token verification failed:', error);
       localStorage.removeItem('token');
+      api.setAuthToken(null);
     } finally {
       setLoading(false);
     }
